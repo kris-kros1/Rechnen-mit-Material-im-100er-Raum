@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zehner und Einer</title>
+<style>
+:root{--b:#438fd4;--bl:#ddecfa;--g:#43aa63;--gl:#e0f5e6;--d:#18334c;--bg:#f4f7f9;--bd:#d9e3ea;--red:#c94141}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--d)}
+main{max-width:900px;margin:auto;padding:8px}
+nav{display:flex;justify-content:center;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+nav button{border:0;border-radius:12px;padding:8px 13px;min-height:40px;background:#e7edf2;color:var(--d);font-size:15px;font-weight:700}
+nav button.on{outline:3px solid #9db3c4;background:#fff}
+nav button.ten.on{background:var(--bl);color:#1764a5}
+nav button.one.on{background:var(--gl);color:#24753b}
+.card{background:#fff;border-radius:20px;padding:10px 14px;box-shadow:0 4px 16px #17324d12}
+.task{display:flex;justify-content:center;align-items:center;gap:14px;min-height:67px;font-size:44px;font-weight:900}
+.op.ten{color:var(--b)}.op.one{color:var(--g)}
+.mat{display:grid;grid-template-columns:1fr 1fr;gap:9px;max-width:720px;margin:auto}
+.box{min-height:145px;border:2px solid var(--bd);border-radius:16px;padding:7px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-content:flex-start}
+.tbox{background:#f8fbff;border-color:#bad8f1}.obox{background:#f8fdf9;border-color:#bde3c8}
+.rod,.cube{border:2px solid;cursor:pointer;padding:0}
+.rod{width:24px;height:108px;border-radius:5px;border-color:#236fae;background:repeating-linear-gradient(to bottom,#3785cd 0,#3785cd 8px,#9bcdf3 8px,#9bcdf3 10px)}
+.cube{width:28px;height:28px;border-radius:5px;border-color:#26874a;background:#4bb96c;box-shadow:inset -4px -4px #2b984f}
+.tools,.answer,.bottom{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap}
+.tools{margin:7px 0}.tools button,.bottom button{border:0;border-radius:13px;min-height:42px;padding:7px 14px;font-size:17px;font-weight:800}
+.bt{background:var(--bl);color:#1764a5}.bo{background:var(--gl);color:#24753b}.swap,.reset{background:#e8eef2;color:#4e6576}
+.answer input{width:115px;height:50px;border:3px solid #b8c8d4;border-radius:13px;text-align:center;font-size:28px;font-weight:900;color:var(--d)}
+.answer button{height:50px;border:0;border-radius:13px;padding:0 20px;background:var(--d);color:#fff;font-size:21px;font-weight:900}
+.feedback{height:32px;text-align:center;padding-top:5px;font-size:19px;font-weight:900}.ok{color:#2e9349}.bad{color:var(--red)}
+.bottom button{background:var(--d);color:#fff}.score{text-align:center;margin-top:5px;font-size:13px;font-weight:700;color:#718493}
+button:disabled{opacity:.35}button:focus-visible,input:focus-visible{outline:4px solid #f0b400;outline-offset:2px}
+@media(min-width:700px) and (max-height:900px){
+main{padding:4px 8px}nav{margin-bottom:4px}nav button{min-height:32px;padding:4px 10px;font-size:13px}
+.card{padding:5px 10px}.task{min-height:48px;font-size:34px}.box{min-height:112px;padding:4px}.rod{height:84px;width:20px}.cube{width:23px;height:23px}
+.tools{margin:4px 0}.tools button,.bottom button{min-height:32px;padding:3px 10px;font-size:14px}
+.answer input{height:40px;font-size:23px}.answer button{height:40px;font-size:17px}.feedback{height:25px;font-size:16px;padding-top:2px}.score{margin-top:2px;font-size:11px}
+}
+</style>
+</head>
+<body>
+<main>
+<nav id="modes">
+<button data-m="mix" class="on">🎲 Alle</button>
+<button data-m="ten" class="ten">Zehner</button>
+<button data-m="one" class="one">Einer</button>
+<button data-m="plus">＋</button>
+<button data-m="minus">−</button>
+</nav>
+<section class="card">
+<div class="task"><span id="start">34</span><span id="op" class="op ten">+ 2 Zehner</span></div>
+<div class="mat"><div id="tens" class="box tbox"></div><div id="ones" class="box obox"></div></div>
+<div class="tools">
+<button id="addTen" class="bt">＋ 🔵</button>
+<button id="addOne" class="bo">＋ 🟢</button>
+<button id="swap" class="swap">🔵 → 10 🟢</button>
+<button id="reset" class="reset">↺</button>
+</div>
+<div class="answer"><input id="ans" type="text" inputmode="numeric" maxlength="3" aria-label="Neue Zahl"><button id="check">✓</button></div>
+<div id="fb" class="feedback"></div>
+<div class="bottom"><button id="next">Neue Aufgabe</button></div>
+<div id="score" class="score">★ 0 / 0</div>
+</section>
+</main>
+<script>
+(function(){
+"use strict";
+var mode="mix",start=34,target=54,kind="ten",sign=1,amount=2,tens=3,ones=4,split=false,locked=false,right=0,tries=0;
+function id(x){return document.getElementById(x)}
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function value(){return tens*10+ones}
+function normalise(){if(!split&&ones>=10){tens+=Math.floor(ones/10);ones=ones%10}}
+function draw(){
+ normalise();
+ var T=id("tens"),O=id("ones");T.innerHTML="";O.innerHTML="";
+ var i,b;
+ for(i=0;i<tens;i++){b=document.createElement("button");b.className="rod";b.type="button";b.setAttribute("aria-label","Zehner wegnehmen");b.onclick=function(){if(!locked&&tens>0){tens--;draw()}};T.appendChild(b)}
+ for(i=0;i<ones;i++){b=document.createElement("button");b.className="cube";b.type="button";b.setAttribute("aria-label","Einer wegnehmen");b.onclick=function(){if(!locked&&ones>0){ones--;if(ones<10)split=false;draw()}};O.appendChild(b)}
+ id("addTen").disabled=locked||value()+10>100;
+ id("addOne").disabled=locked||value()+1>100;
+ id("swap").disabled=locked||tens<1;
+}
+function resetMaterial(){tens=Math.floor(start/10);ones=start%10;split=false;draw()}
+function newTask(){
+ locked=false;id("fb").textContent="";id("fb").className="feedback";id("ans").value="";
+ var ok=false,n=0;
+ while(!ok&&n<1000){
+  n++;
+  kind=mode==="ten"?"ten":mode==="one"?"one":Math.random()<.5?"ten":"one";
+  sign=mode==="plus"?1:mode==="minus"?-1:(Math.random()<.5?1:-1);
+  amount=kind==="ten"?rnd(1,4):rnd(1,9);
+  start=rnd(10,99);
+  target=start+sign*(kind==="ten"?amount*10:amount);
+  ok=target>=1&&target<=100;
+ }
+ id("start").textContent=start;
+ id("op").textContent=(sign>0?"+ ":"− ")+amount+" "+(kind==="ten"?"Zehner":"Einer");
+ id("op").className="op "+kind;
+ resetMaterial();
+}
+function check(){
+ if(locked)return;
+ var raw=id("ans").value.trim(),n=Number(raw);
+ if(raw===""||!Number.isInteger(n)||n<0||n>100){id("fb").textContent="✗";id("fb").className="feedback bad";return}
+ tries++;
+ if(n===target&&value()===target){right++;locked=true;id("fb").textContent="✓ Richtig!";id("fb").className="feedback ok";draw()}
+ else{id("fb").textContent="✗ Noch einmal";id("fb").className="feedback bad"}
+ id("score").textContent="★ "+right+" / "+tries;
+}
+id("addTen").onclick=function(){if(!locked&&value()+10<=100){tens++;draw()}};
+id("addOne").onclick=function(){if(!locked&&value()+1<=100){ones++;split=false;draw()}};
+id("swap").onclick=function(){if(!locked&&tens>0){tens--;ones+=10;split=true;draw()}};
+id("reset").onclick=function(){if(!locked){resetMaterial();id("fb").textContent=""}};
+id("check").onclick=check;
+id("next").onclick=newTask;
+id("ans").onkeydown=function(e){if(e.key==="Enter")check()};
+var buttons=id("modes").querySelectorAll("button");
+for(var i=0;i<buttons.length;i++){buttons[i].onclick=function(){
+ for(var j=0;j<buttons.length;j++)buttons[j].classList.remove("on");
+ this.classList.add("on");mode=this.getAttribute("data-m");newTask();
+}}
+newTask();
+})();
+</script>
+</body>
+</html>
